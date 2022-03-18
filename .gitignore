@@ -130,3 +130,5 @@ dmypy.json
 
 #Directories
 models/weights/
+lightning_logs/
+data/MNIST/
