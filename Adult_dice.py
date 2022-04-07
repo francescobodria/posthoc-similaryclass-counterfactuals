@@ -82,58 +82,58 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratif
 
 # ### XGBOOST
 
-from xgboost import XGBClassifier
-clf_xgb = XGBClassifier(n_estimators=60, reg_lambda=3, use_label_encoder=False, eval_metric='logloss')
-clf_xgb.fit(X_train, y_train)
-pickle.dump(clf_xgb,open('./BlackBoxes/adult_dice_xgboost.p','wb'))
-
-clf_xgb = pickle.load(open('./BlackBoxes/adult_dice_xgboost.p','rb'))
-def predict(x, return_proba=False):
-    if return_proba:
-        return clf_xgb.predict_proba(x)[:,1].ravel()
-    else: return clf_xgb.predict(x).ravel().ravel()
-y_train_pred = predict(X_train)
-y_test_pred = predict(X_test)
-print('XGBOOST')
-print('train acc:',np.mean(np.round(y_train_pred)==y_train))
-print('test acc:',np.mean(np.round(y_test_pred)==y_test))
+#from xgboost import XGBClassifier
+#clf_xgb = XGBClassifier(n_estimators=60, reg_lambda=3, use_label_encoder=False, eval_metric='logloss')
+#clf_xgb.fit(X_train, y_train)
+#pickle.dump(clf_xgb,open('./BlackBoxes/adult_dice_xgboost.p','wb'))
+#
+#clf_xgb = pickle.load(open('./BlackBoxes/adult_dice_xgboost.p','rb'))
+#def predict(x, return_proba=False):
+#    if return_proba:
+#        return clf_xgb.predict_proba(x)[:,1].ravel()
+#    else: return clf_xgb.predict(x).ravel().ravel()
+#y_train_pred = predict(X_train)
+#y_test_pred = predict(X_test)
+#print('XGBOOST')
+#print('train acc:',np.mean(np.round(y_train_pred)==y_train))
+#print('test acc:',np.mean(np.round(y_test_pred)==y_test))
 
 # ### RF
 
-from sklearn.ensemble import RandomForestClassifier
-
-clf_rf = RandomForestClassifier(max_depth=7,random_state=rnd)
-clf_rf.fit(X_train, y_train)
-
-pickle.dump(clf_rf,open('./BlackBoxes/adult_dice_rf.p','wb'))
-clf_rf = pickle.load(open('./BlackBoxes/adult_dice_rf.p','rb'))
-
-def predict(x, return_proba=False):
-    if return_proba:
-        return clf_rf.predict_proba(x)[:,1].ravel()
-    else: return clf_rf.predict(x).ravel().ravel()
-y_test_pred = predict(X_test, return_proba=True)
-y_train_pred = predict(X_train, return_proba=True)
-print('RF')
-print('train acc:',np.mean(np.round(y_train_pred)==y_train))
-print('test acc:',np.mean(np.round(y_test_pred)==y_test))
+#from sklearn.ensemble import RandomForestClassifier
+#
+#clf_rf = RandomForestClassifier(max_depth=7,random_state=rnd)
+#clf_rf.fit(X_train, y_train)
+#
+#pickle.dump(clf_rf,open('./BlackBoxes/adult_dice_rf.p','wb'))
+#clf_rf = pickle.load(open('./BlackBoxes/adult_dice_rf.p','rb'))
+#
+#def predict(x, return_proba=False):
+#    if return_proba:
+#        return clf_rf.predict_proba(x)[:,1].ravel()
+#    else: return clf_rf.predict(x).ravel().ravel()
+#y_test_pred = predict(X_test, return_proba=True)
+#y_train_pred = predict(X_train, return_proba=True)
+#print('RF')
+#print('train acc:',np.mean(np.round(y_train_pred)==y_train))
+#print('test acc:',np.mean(np.round(y_test_pred)==y_test))
 
 ## SVC
 
-from sklearn.svm import SVC
-clf_svc = SVC(gamma='auto', probability=True)
-clf_svc.fit(X_train, y_train)
-pickle.dump(clf_svc,open('./BlackBoxes/adult_dice_svc.p','wb'))
-clf_svc = pickle.load(open('./BlackBoxes/adult_dice_svc.p','rb'))
-def predict(x, return_proba=False):
-    if return_proba:
-        return clf_svc.predict_proba(x)[:,1].ravel()
-    else: return clf_svc.predict(x).ravel().ravel()
-y_train_pred = predict(X_train, return_proba=True)
-y_test_pred = predict(X_test, return_proba=True)
-print('SVC')
-print('train acc:',np.mean(np.round(y_train_pred)==y_train))
-print('test acc:',np.mean(np.round(y_test_pred)==y_test))
+#from sklearn.svm import SVC
+#clf_svc = SVC(gamma='auto', probability=True)
+#pickle.dump(clf_svc,open('./BlackBoxes/adult_dice_svc.p','wb'))
+#clf_svc.fit(X_train, y_train)
+#clf_svc = pickle.load(open('./BlackBoxes/adult_dice_svc.p','rb'))
+#def predict(x, return_proba=False):
+#    if return_proba:
+#        return clf_svc.predict_proba(x)[:,1].ravel()
+#    else: return clf_svc.predict(x).ravel().ravel()
+#y_train_pred = predict(X_train, return_proba=True)
+#y_test_pred = predict(X_test, return_proba=True)
+#print('SVC')
+#print('train acc:',np.mean(np.round(y_train_pred)==y_train))
+#print('test acc:',np.mean(np.round(y_test_pred)==y_test))
 
 # ### NN tf
 
@@ -195,7 +195,7 @@ print(accuracy_score(np.round(predict(X_train, return_proba = True)),y_train))
 print(accuracy_score(np.round(predict(X_test, return_proba = True)),y_test))
 print('---------------')
 
-for black_box in ['xgb', 'rf', 'svc', 'nn']:
+for black_box in ['nn']:
 
     from scipy.spatial.distance import euclidean, cdist
 
@@ -210,10 +210,13 @@ for black_box in ['xgb', 'rf', 'svc', 'nn']:
         X = df.copy()
         std = MinMaxScaler(feature_range=(-1,1))
         X.iloc[:,:2] = std.fit_transform(X.values[:,:2])
+        hot_enc = OneHotEncoder(handle_unknown='ignore')
+        hot_enc.fit(X.iloc[:,[2,3,4,5,6]])
         X.drop(['income'], axis=1, inplace=True)
         y = df["income"].apply(lambda x: ">50K" in x).astype(int)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=rnd)
         dataset = pd.DataFrame(np.hstack((y_train.values.reshape(-1,1).astype(int),X_train.values)), columns=['income']+list(X_train.columns))
+        X_train = np.hstack((X_train.values[:,:2].astype(float),hot_enc.transform(pd.DataFrame(X_train.values[:,[2,3,4,5,6]],columns=list(df.columns)[2:-1])).toarray().astype(int)))  
         dataset.loc[:,'age']=dataset.loc[:,'age'].values.astype(float)
         dataset.loc[:,'hoursPerWeek']=dataset.loc[:,'hoursPerWeek'].values.astype(float)
         d = dice_ml.Data(dataframe=dataset, continuous_features=['age', 'hoursPerWeek'], outcome_name='income')
@@ -278,8 +281,13 @@ for black_box in ['xgb', 'rf', 'svc', 'nn']:
         query_instances = dataset.iloc[i:i+1,1:]
         try:
             q_cfs_dice = compute_cfs_dice(query_instances)
-            d_dist_dice.append(np.min(cdist(q_cfs_dice[:,:-1],query_instances.values)))
-            d_count_dice.append(np.min(np.sum(q_cfs_dice[:,:-1]!=query_instances.values,axis=1)))
+            if black_box == 'nn':
+                q_cfs_dice = np.hstack((q_cfs_dice[:,:2].astype(float),hot_enc.transform(pd.DataFrame(q_cfs_dice[:,[2,3,4,5,6]],columns=list(df.columns)[2:-1])).toarray().astype(int),q_cfs_dice[:,-1].reshape(-1,1).astype(float)))
+                query_instances = np.hstack((query_instances.values[:,:2].astype(float),hot_enc.transform(pd.DataFrame(query_instances.values[:,[2,3,4,5,6]],columns=list(df.columns)[2:-1])).toarray().astype(int)))
+            else:
+                query_instances = query_instances.values
+            d_dist_dice.append(np.min(cdist(q_cfs_dice[:,:-1],query_instances)))
+            d_count_dice.append(np.min(np.sum(q_cfs_dice[:,:-1]!=query_instances,axis=1)))
             d_impl_dice.append(np.min(cdist(q_cfs_dice[:,:-1],X_train)))
             num_dice.append(len(q_cfs_dice))
             div_dist_dice.append(1/(q_cfs_dice.shape[0]**2)*np.sum(cdist(q_cfs_dice[:,:-1],q_cfs_dice[:,:-1])))
@@ -295,7 +303,7 @@ for black_box in ['xgb', 'rf', 'svc', 'nn']:
         f.write(str(np.round(np.mean(num_dice),5))+','+str(np.round(np.std(num_dice),5))+'\n')
         f.write(str(np.round(np.mean(div_dist_dice),5))+','+str(np.round(np.std(div_dist_dice),5))+'\n')
         f.write(str(np.round(np.mean(div_count_dice),5))+','+str(np.round(np.std(div_count_dice),5))+'\n')
-        f.write('success_rate: '+str(len(d_dist_dice)/100)+'\n')
+        f.write('success_rate: '+str(len(d_dist_dice)/10)+'\n')
 
 
 

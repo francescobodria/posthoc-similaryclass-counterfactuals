@@ -1,0 +1,59 @@
+dice xgb
+0.24484,0.36503
+1.89189,1.41963
+0.17246,0.17615
+4.0,0.0
+1.31575,0.39859
+2.7579,1.50055
+success_rate: 0.74
+
+dice rf
+0.64312,0.65873
+4.67568,4.03065
+0.29163,0.2386
+4.0,0.0
+1.79195,0.68669
+5.55177,4.11406
+success_rate: 0.74
+
+dice svc
+0.70687,0.63876
+2.63514,2.59716
+0.32322,0.24497
+4.0,0.0
+1.46604,0.45869
+3.51846,2.06339
+success_rate: 0.74
+
+dice nn
+0.54599,0.45634
+6.19481,2.19231
+0.28303,0.08917
+4.0,0.0
+2.22843,0.25456
+9.07079,1.598
+success_rate: 0.77
+dice xgb
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+success_rate: 0.0
+dice rf
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+success_rate: 0.0
+dice svc
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+nan,nan
+success_rate: 0.0

@@ -1,6 +1,7 @@
 import pandas as pd
 import pickle
 import numpy as np
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -168,7 +169,7 @@ def plot_metric(history, metric):
     plt.legend(["train_"+metric, 'val_'+metric])
     plt.show()
 
-plot_metric(history, 'loss')
+#plot_metric(history, 'loss')
 clf_nn.save_weights('./blackboxes/adult_tf_nn')
 
 from sklearn.metrics import accuracy_score
@@ -186,7 +187,7 @@ print(accuracy_score(np.round(predict(X_test, return_proba = True)),y_test))
 print('---------------')
 
 
-for black_box in ['nn', 'rf', 'svc', 'xgb']:
+for black_box in ['xgb','rf','svc', 'nn']:
     
     X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=rnd)
     
@@ -225,7 +226,8 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
     X_train = np.hstack((X_train,y_train_pred.reshape(-1,1)))
     X_test = np.hstack((X_test,y_test_pred.reshape(-1,1)))
 
-    latent_dim = 4
+    latent_dim = 5
+    alpha = 2
     batch_size = 1024
     sigma = 1
     max_epochs = 1000
@@ -235,7 +237,14 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
 
     similarity_KLD = torch.nn.KLDivLoss(reduction='batchmean')
 
-    def compute_similarity(X, sigma, idx_cat=None):
+    def compute_similarity_Z(Z, sigma):
+        D = torch.cdist(Z,Z)
+        M = torch.exp((-D**2)/(2*sigma**2))
+        return M / (torch.ones([M.shape[0],M.shape[1]])*(torch.sum(M, axis = 0)-1)).transpose(0,1)
+
+    def compute_similarity_X(X, sigma, alpha, idx_cat=None):
+        D_class = torch.cdist(X[:,-1].reshape(-1,1),X[:,-1].reshape(-1,1))
+        X = X[:, :-1]
         if idx_cat:
             X_cat = X[:, idx_cat]
             X_cont = X[:, np.delete(range(X.shape[1]),idx_cat)]
@@ -243,15 +252,15 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
             m = X.shape[1]
             D_cont = torch.cdist(X_cont,X_cont)
             D_cat = torch.cdist(X_cat, X_cat, p=0)/h
-            D = h/m * D_cat + ((m-h)/m) * D_cont
+            D = h/m * D_cat + ((m-h)/m) * D_cont + alpha * D_class
         else:
-            D = torch.cdist(X,X)
+            D = torch.cdist(X,X) + alpha * D_class
         M = torch.exp((-D**2)/(2*sigma**2))
         return M / (torch.ones([M.shape[0],M.shape[1]])*(torch.sum(M, axis = 0)-1)).transpose(0,1)
 
     def loss_function(X, Z, idx_cat, sigma=1):
-        Sx = compute_similarity(X, sigma, idx_cat)
-        Sz = compute_similarity(Z, 1)
+        Sx = compute_similarity_X(X, sigma, alpha, idx_cat)
+        Sz = compute_similarity_Z(Z, 1)
         loss = similarity_KLD(torch.log(Sx), Sz)
         return loss
 
@@ -343,7 +352,7 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
             wait = 0
             best = epoch_test_losses[-1]
             best_epoch = epoch
-            torch.save(model.state_dict(), f'./models/weights/LinearTransparent.pt')
+            torch.save(model.state_dict(), f'./models/weights/LinearTransparent_adult.pt')
         else:
             wait += 1
         pbar.postfix[7]["value"] = wait
@@ -352,15 +361,15 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
         epoch += 1
         pbar.update()
 
-    model.load_state_dict(torch.load(f'./models/weights/LinearTransparent.pt'))
+    model.load_state_dict(torch.load(f'./models/weights/LinearTransparent_adult.pt'))
     with torch.no_grad():
         model.eval()
         Z_train = model(torch.tensor(X_train).float()).cpu().detach().numpy()
         Z_test = model(torch.tensor(X_test).float()).cpu().detach().numpy()
 
-    torch.save(model.state_dict(), f'./models/adult_{black_box}_{latent_dim}.pt')
+    torch.save(model.state_dict(), f'./models/adult_latent_{black_box}_{latent_dim}_{str(alpha).replace(".", "")}.pt')
 
-    model.load_state_dict(torch.load(f'./models/adult_{black_box}_{latent_dim}.pt'))
+    model.load_state_dict(torch.load(f'./models/adult_latent_{black_box}_{latent_dim}_{str(alpha).replace(".", "")}.pt'))
     with torch.no_grad():
         model.eval()
         Z_train = model(torch.tensor(X_train).float()).cpu().detach().numpy()
@@ -376,11 +385,11 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
         q_cf_preds = []
         q_cf_preds.append(float(predict(q_cf[:-1].reshape(1,-1),return_proba=True)))
         if q_pred > 0.5:
-            m = -1
+            m = -0.1
         else:
-            m = +1
-        v = np.array(model(torch.tensor(q).float()).detach().numpy()+m*y_contrib)
+            m = +0.1
         while np.round(q_pred) == np.round(q_cf_preds[-1]):
+            v = np.array(model(torch.tensor(q_cf).float()).detach().numpy()+m*y_contrib)
             c_l = [v[l] - np.sum(q_cf*w[l,:]) - b[l] for l in range(latent_dim)]
             M = []
             for l in range(latent_dim):
@@ -413,20 +422,41 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
 
     for idx in tqdm(range(100)):
         q = X_test[idx,:].copy()
-        q_pred = np.round(predict(q[:-1].reshape(1,-1),return_proba=True))
+        q_pred = predict(q[:-1].reshape(1,-1),return_proba=False)
         q_cfs = []
-        for i in range(1,8):
-            for indexes in  list(combinations([0,1,2,3,4,5,6],i)):    
-                q_cf = compute_cf(q, list(indexes))
-                q_cf_pred = predict(q_cf[:-1].reshape(1,-1),return_proba=True)
-                if q_pred:
-                    if q_cf_pred < 0.5:
-                        #q_cfs.append([list(indexes),q_cf_pred,q_cf])
-                        q_cfs.append(q_cf)
-                else:
-                    if q_cf_pred > 0.5:
-                        #q_cfs.append([list(indexes),q_cf_pred,q_cf])
-                        q_cfs.append(q_cf)
+        l_i = []
+        l_f = []
+
+        for indexes in list(combinations(list(range(7)),2)):    
+            q_cf = compute_cf(q, list(indexes))
+            q_cf_pred = predict(q_cf[:-1].reshape(1,-1),return_proba=True)
+            if q_pred:
+                if q_cf_pred<0.5:
+                    q_cfs.append(q_cf)
+            else:
+                if q_cf_pred>0.5:
+                   q_cfs.append(q_cf) 
+            l_i.append([list(indexes),q_cf_pred])
+        r = np.argsort(np.stack(np.array(l_i,dtype=object)[:,1]).ravel())[-10:]
+        l_i = np.array(l_i,dtype=object)[r,0]
+
+        while len(l_i[0])<=6:
+            for e in l_i:
+                for i in list(np.delete(range(7),e)):
+                    q_cf = compute_cf(q, e+[i])
+                    q_cf_pred = predict(q_cf[:-1].reshape(1,-1),return_proba=True)
+                    if q_pred:
+                        if q_cf_pred<0.5:
+                            q_cfs.append(q_cf)
+                    else:
+                        if q_cf_pred>0.5:
+                            q_cfs.append(q_cf) 
+                    l_f.append([e+[i],q_cf_pred])
+            r = np.argsort(np.stack(np.array(l_f,dtype=object)[:,1]).ravel())[-10:]
+            l_f = np.array(l_f,dtype=object)[r,0]
+            l_i = l_f.copy()
+            l_f = []
+        
         if len(q_cfs)<1:
             continue
         else:
@@ -448,100 +478,81 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
         f.write(str(np.round(np.mean(div_count),5))+','+str(np.round(np.std(div_count),5))+'\n')
         f.write('success_rate: '+str(len(d_dist)/100)+'\n')
 
-    # # Growing Spheres
+    ## # Growing Spheres
 
-    from growingspheres import counterfactuals as cf
+    #from growingspheres import counterfactuals as cf
 
-    d_dist_GS = []
-    d_count_GS = []
-    d_impl_GS = []
+    #d_dist_GS = []
+    #d_count_GS = []
+    #d_impl_GS = []
 
-    for idx in tqdm(range(100)):
-        q = X_test[idx,:-1].reshape(1,-1).copy()
-        CF = cf.CounterfactualExplanation(q, predict, method='GS')
-        CF.fit(n_in_layer=2000, first_radius=0.1, dicrease_radius=10, sparse=True, verbose=False)
-        q_cf_GS = CF.enemy
-        d_dist_GS.append(float(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),q[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),q[:,[0,1]],metric='euclidean')))
-        d_count_GS.append(np.sum(q_cf_GS!=q))
-        d_impl_GS.append(np.min(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),X_train[:,[0,1]],metric='euclidean')))
+    #for idx in tqdm(range(100)):
+    #    q = X_test[idx,:-1].reshape(1,-1).copy()
+    #    CF = cf.CounterfactualExplanation(q, predict, method='GS')
+    #    CF.fit(n_in_layer=2000, first_radius=0.1, dicrease_radius=10, sparse=True, verbose=False)
+    #    q_cf_GS = CF.enemy
+    #    d_dist_GS.append(float(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),q[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),q[:,[0,1]],metric='euclidean')))
+    #    d_count_GS.append(np.sum(q_cf_GS!=q))
+    #    d_impl_GS.append(np.min(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),X_train[:,[0,1]],metric='euclidean')))
 
-    with open('./results/adult_results.txt','a') as f:
-        f.write('GSG '+black_box+'\n')
-        f.write(str(np.round(np.mean(d_dist_GS),5))+','+str(np.round(np.std(d_dist_GS),5))+'\n')
-        f.write(str(np.round(np.mean(d_count_GS),5))+','+str(np.round(np.std(d_count_GS),5))+'\n')
-        f.write(str(np.round(np.mean(d_impl_GS),5))+','+str(np.round(np.std(d_impl_GS),5))+'\n')
-        f.write('success_rate: '+str(len(d_dist_GS)/100)+'\n')
+    #with open('./results/adult_results.txt','a') as f:
+    #    f.write('GSG '+black_box+'\n')
+    #    f.write(str(np.round(np.mean(d_dist_GS),5))+','+str(np.round(np.std(d_dist_GS),5))+'\n')
+    #    f.write(str(np.round(np.mean(d_count_GS),5))+','+str(np.round(np.std(d_count_GS),5))+'\n')
+    #    f.write(str(np.round(np.mean(d_impl_GS),5))+','+str(np.round(np.std(d_impl_GS),5))+'\n')
+    #    f.write('success_rate: '+str(len(d_dist_GS)/100)+'\n')
 
-    # FAT
+    #from scipy.spatial.distance import cdist, euclidean
+    #from scipy.optimize import minimize
+    #from scipy import stats
 
-    import fatf.utils.data.datasets as fatf_datasets
-    import fatf.utils.models as fatf_models
-    import fatf.transparency.predictions.counterfactuals as fatf_cf
+    #d_dist_watch = []
+    #d_count_watch = []
+    #d_impl_watch = []
 
-    # Create a Counterfactual Explainer
-    if black_box =='xgb':
-        cf_explainer = fatf_cf.CounterfactualExplainer(
-            model=clf_xgb,
-            dataset=X_train[:,:-1],
-            categorical_indices=[],
-            default_numerical_step_size=0.1)
-    elif black_box == 'rf':
-        cf_explainer = fatf_cf.CounterfactualExplainer(
-            model=clf_rf,
-            dataset=X_train[:,:-1],
-            categorical_indices=[],
-            default_numerical_step_size=0.1)
-    elif black_box == 'svc':
-        cf_explainer = fatf_cf.CounterfactualExplainer(
-            model=clf_svc,
-            dataset=X_train[:,:-1],
-            categorical_indices=[],
-            default_numerical_step_size=0.1)
-    elif black_box == 'nn':
-        class FAT_wrapper():
-            def __init__(self,model):
-                self.model = model
+    #for i in tqdm(range(100)):
+    #    # initial conditions
+    #    lamda = 0.1 
+    #    x0 = np.zeros([1,X_train.shape[1]]) # initial guess for cf
+    #    q = X_test[i:i+1,:].copy()
+    #    pred = predict(q,return_proba=False)
 
-            def predict(self,x):
-                return np.round(self.model.predict(x).ravel()).astype(int).ravel()
+    #    def dist_mad(cf, eg):
+    #        manhat = [cdist(eg.T, cf.reshape(1,-1).T ,metric='cityblock')[i][i] for i in range(len(eg.T))]
+    #        #mad = stats.median_absolute_deviation(X_train)
+    #        return sum(manhat)
 
-            def fit(self, x, y):
-                pass
+    #    def loss_function_mad(x_dash):
+    #        target = 1-pred
+    #        if target == 0:
+    #            L = lamda*(predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q)
+    #        else:
+    #            L = lamda*(1-predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q) 
+    #        return L
 
-            def predict_proba(self,x):
-                return self.model.predict(x).ravel()
-        fat_model = FAT_wrapper(clf_nn)
-        cf_explainer = fatf_cf.CounterfactualExplainer(
-            model=fat_model,
-            dataset=X_train[:,:-1],
-            categorical_indices=[],
-            default_numerical_step_size=0.1)
+    #    res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
+    #    cf = res.x.reshape(1, -1)
 
-    d_dist_fat = []
-    d_count_fat = []
-    d_impl_fat = []
-    num_fat = []
-    div_dist_fat = []
-    div_count_fat = []
+    #    i = 0
+    #    r = 1
+    #    while pred == predict(cf):
+    #        lamda += 0.1
+    #        x0 = cf 
+    #        res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
+    #        cf = res.x.reshape(1, -1)
+    #        i += 1
+    #        if i == 100:
+    #            r = 0
+    #            break
 
-    for i in tqdm(range(100)):
-        q = X_test[i,:-1].copy()
-        dp_1_cf_tuple = cf_explainer.explain_instance(q)
-        q_cfs_fat, _, _ = dp_1_cf_tuple
-        if len(q_cfs_fat) > 0:
-            d_dist_fat.append(np.min(cdist(q_cfs_fat[:,[2,3,4,5,6]],q[[2,3,4,5,6]].reshape(1,-1),metric='hamming') + cdist(q_cfs_fat[:,[0,1]],q[[0,1]].reshape(1,-1),metric='euclidean')))
-            d_impl_fat.append(np.min(cdist(q_cfs_fat[:,[2,3,4,5,6]],X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cfs_fat[:,[0,1]],X_train[:,[0,1]],metric='euclidean')))
-            d_count_fat.append(np.min(np.sum(q_cfs_fat!=q.reshape(1,-1),axis=1)))
-            num_fat.append(len(q_cfs_fat))
-            div_dist_fat.append(1/(q_cfs_fat.shape[0]**2)*np.sum(cdist(q_cfs_fat, q_cfs_fat)))
-            div_count_fat.append(7/(q_cfs_fat.shape[0]**2)*np.sum(cdist(q_cfs_fat, q_cfs_fat, metric='hamming')))
+    #    if r == 1:
+    #        d_dist_watch.append(euclidean(cf,q))
+    #        d_count_watch.append(1/(cf.shape[0])*np.sum(cf!=q))
+    #        d_impl_watch.append(np.min(cdist(cf.reshape(1,-1),X_train)))
 
-    with open('./results/adult_results.txt','a') as f:
-        f.write('fat '+black_box+'\n')
-        f.write(str(np.round(np.mean(d_dist_fat),5))+','+str(np.round(np.std(d_dist_fat),5))+'\n')
-        f.write(str(np.round(np.mean(d_count_fat),5))+','+str(np.round(np.std(d_count_fat),5))+'\n')
-        f.write(str(np.round(np.mean(d_impl_fat),5))+','+str(np.round(np.std(d_impl_fat),5))+'\n')
-        f.write(str(np.round(np.mean(num_fat),5))+','+str(np.round(np.std(num_fat),5))+'\n')
-        f.write(str(np.round(np.mean(div_dist_fat),5))+','+str(np.round(np.std(div_dist_fat),5))+'\n')
-        f.write(str(np.round(np.mean(div_count_fat),5))+','+str(np.round(np.std(div_count_fat),5))+'\n')
-        f.write('success_rate: '+str(len(d_dist_fat)/100)+'\n')
+    #with open('./results/adult_results.txt','a') as f:
+    #    f.write('Watcher '+black_box+'\n')
+    #    f.write(str(np.round(np.mean(d_dist_watch),5))+','+str(np.round(np.std(d_dist_watch),5))+'\n')
+    #    f.write(str(np.round(np.mean(d_count_watch),5))+','+str(np.round(np.std(d_count_watch),5))+'\n')
+    #    f.write(str(np.round(np.mean(d_impl_watch),5))+','+str(np.round(np.std(d_impl_watch),5))+'\n')
+    #    f.write('success_rate: '+str(len(d_dist_watch)/100)+'\n')
