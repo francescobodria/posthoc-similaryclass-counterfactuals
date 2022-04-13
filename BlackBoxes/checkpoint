@@ -1,2 +1,2 @@
-model_checkpoint_path: "compas_tf_nn"
-all_model_checkpoint_paths: "compas_tf_nn"
+model_checkpoint_path: "adult_dice_tf_nn"
+all_model_checkpoint_paths: "adult_dice_tf_nn"

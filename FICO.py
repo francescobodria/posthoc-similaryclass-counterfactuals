@@ -1,5 +1,4 @@
 import tensorflow as tf
-#tf.compat.v1.enable_eager_execution()
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import numpy as np
@@ -28,9 +27,9 @@ y = df['RiskPerformance'].values
 
 X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
-# # BlackBoxes
+# BlackBoxes
 
-# ### XGBOOST
+### XGBOOST
 
 from xgboost import XGBClassifier
 
@@ -46,7 +45,7 @@ print('XGBOOST')
 print('train acc:',np.mean(np.round(y_train_pred)==Y_train))
 print('test acc:',np.mean(np.round(y_test_pred)==Y_test))
 
-# ### Random Forest
+### Random Forest
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -62,7 +61,7 @@ print('RF')
 print('train acc:',np.mean(np.round(y_train_pred)==Y_train))
 print('test acc:',np.mean(np.round(y_test_pred)==Y_test))
 
-# ### SVC
+### SVC
 
 from sklearn.svm import SVC
 clf_svc = SVC(gamma='auto', probability=True)
@@ -77,7 +76,7 @@ print('SVC')
 print('train acc:',np.mean(np.round(y_train_pred)==Y_train))
 print('test acc:',np.mean(np.round(y_test_pred)==Y_test))
 
-# ### NN tf
+### NN tf
 
 import tensorflow as tf
 from tensorflow import keras
@@ -221,7 +220,7 @@ print('---------------')
 
 # # Latent Space
 
-for black_box in ['rf', 'svc', 'xgb']:
+for black_box in ['xgb', 'svc', 'nn']:
     
     X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.33, random_state=42)
 
@@ -439,6 +438,7 @@ for black_box in ['rf', 'svc', 'xgb']:
     d_dist = []
     d_impl = []
     d_count = []
+    d_adv = []
     num = []
     div_dist = []
     div_count = []
@@ -449,6 +449,16 @@ for black_box in ['rf', 'svc', 'xgb']:
         q_cfs = []
         l_i = []
         l_f = []
+
+        for indexes in list(combinations(list(range(24)),1)):    
+            q_cf = compute_cf(q, list(indexes))
+            q_cf_pred = predict(q_cf[:-1].reshape(1,-1),return_proba=True)
+            if q_pred:
+                if q_cf_pred<0.5:
+                    q_cfs.append(q_cf)
+            else:
+                if q_cf_pred>0.5:
+                    q_cfs.append(q_cf) 
 
         for indexes in list(combinations(list(range(24)),2)):    
             q_cf = compute_cf(q, list(indexes))
@@ -487,6 +497,8 @@ for black_box in ['rf', 'svc', 'xgb']:
             d_dist.append(np.min(cdist(q_cfs[:,:-1],q[:-1].reshape(1,-1))))
             d_impl.append(np.min(cdist(q_cfs[:,:-1],X_train[:,:-1])))
             d_count.append(np.min(np.sum(q_cfs[:,:-1]!=q[:-1],axis=1)))
+            r = np.argsort(cdist(q_cfs[:,:-1],X_train[:,:-1]),axis=1)[:,:10]
+            d_adv.append(np.mean(np.array([np.mean(predict(X_train[r,:-1][i,:])==q_pred) for i in range(q_cfs.shape[0])])))
             num.append(len(q_cfs))
             div_dist.append(1/(q_cfs.shape[0]**2)*np.sum(cdist(q_cfs[:,:-1],q_cfs[:,:-1])))
             div_count.append(23/(q_cfs.shape[0]**2)*np.sum(cdist(q_cfs[:,:-1], q_cfs[:,:-1],metric='hamming')))
@@ -496,6 +508,7 @@ for black_box in ['rf', 'svc', 'xgb']:
         f.write(str(np.round(np.mean(d_dist),5))+','+str(np.round(np.std(d_dist),5))+'\n')
         f.write(str(np.round(np.mean(d_count),5))+','+str(np.round(np.std(d_count),5))+'\n')
         f.write(str(np.round(np.mean(d_impl),5))+','+str(np.round(np.std(d_impl),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv),5))+','+str(np.round(np.std(d_adv),5))+'\n')
         f.write(str(np.round(np.mean(num),5))+','+str(np.round(np.std(num),5))+'\n')
         f.write(str(np.round(np.mean(div_dist),5))+','+str(np.round(np.std(div_dist),5))+'\n')
         f.write(str(np.round(np.mean(div_count),5))+','+str(np.round(np.std(div_count),5))+'\n')
@@ -510,33 +523,38 @@ for black_box in ['rf', 'svc', 'xgb']:
     #print('div_count: \t', np.round(np.mean(div_count),5),np.round(np.std(div_count),5))
     #print('success_rate: \t', len(d_dist)/10)
 
-    # # Growing Spheres
+    # Growing Spheres
 
-    #from growingspheres import counterfactuals as cf
+    from growingspheres import counterfactuals as cf
+    from scipy.spatial.distance import hamming, euclidean
 
-    #d_dist_GS = []
-    #d_count_GS = []
-    #d_impl_GS = []
+    d_dist_GS = []
+    d_count_GS = []
+    d_impl_GS = []
+    d_adv_GS = []
 
-    #for idx in tqdm(range(100)):
-    #    q = X_test[idx,:-1].reshape(1,-1).copy()
-    #    CF = cf.CounterfactualExplanation(q, predict_clf_nn, method='GS')
-    #    CF.fit(n_in_layer=2000, first_radius=0.1, dicrease_radius=10, sparse=True, verbose=False)
-    #    q_cf_GS = CF.enemy
-    #    d_dist_GS.append(euclidean(q_cf_GS,q))
-    #    #d_count_GS.append(1/(q_cf_GS.shape[0])*np.sum(q_cf_GS!=q))
-    #    d_count_GS.append(np.sum(q_cf_GS!=q))
-    #    d_impl_GS.append(np.min(cdist(q_cf_GS.reshape(1,-1),X_train[:,:-1])))
+    for idx in tqdm(range(100)):
+        q = X_test[idx,:-1].reshape(1,-1).copy()
+        pred = int(predict(q))
+        CF = cf.CounterfactualExplanation(q, predict, method='GS')
+        CF.fit(n_in_layer=2000, first_radius=0.1, dicrease_radius=10, sparse=True, verbose=False)
+        q_cf_GS = CF.enemy
+        d_dist_GS.append(euclidean(q_cf_GS,q))
+        d_count_GS.append(np.sum(q_cf_GS!=q))
+        d_impl_GS.append(np.min(cdist(q_cf_GS.reshape(1,-1),X_train[:,:-1])))
+        r = np.argsort(cdist(q_cf_GS.reshape(1,-1),X_train[:,:-1]),axis=1)[:,:10]
+        d_adv_GS.append(np.mean(np.array([np.mean(predict(X_train[r,:-1][i,:])==pred) for i in range(q_cf_GS.reshape(1,-1).shape[0])])))
 
-    #with open('./results/fico_results.txt','a') as f:
-    #    f.write('GSG '+black_box+'\n')
-    #    #f.write(str(np.round(np.mean(d_dist_GS),5))+','+str(np.round(np.std(d_dist_GS),5))+'\n')
-    #    f.write(str(np.round(np.mean(d_count_GS),5))+','+str(np.round(np.std(d_count_GS),5))+'\n')
-    #    #f.write(str(np.round(np.mean(d_impl_GS),5))+','+str(np.round(np.std(d_impl_GS),5))+'\n')
+    with open('./results/fico_results.txt','a') as f:
+        f.write('GSG '+black_box+'\n')
+        f.write(str(np.round(np.mean(d_dist_GS),5))+','+str(np.round(np.std(d_dist_GS),5))+'\n')
+        f.write(str(np.round(np.mean(d_count_GS),5))+','+str(np.round(np.std(d_count_GS),5))+'\n')
+        f.write(str(np.round(np.mean(d_impl_GS),5))+','+str(np.round(np.std(d_impl_GS),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv_GS),5))+','+str(np.round(np.std(d_adv_GS),5))+'\n')
 
-    ##print('d_dist: \t',    np.round(np.mean(d_dist_GS),5),   np.round(np.std(d_dist_GS),5))
-    ##print('d_count: \t',   np.round(np.mean(d_count_GS),5),  np.round(np.std(d_count_GS),5))
-    ##print('implicity: \t', np.round(np.mean(d_impl_GS),5),   np.round(np.std(d_impl_GS),5))
+    #print('d_dist: \t',    np.round(np.mean(d_dist_GS),5),   np.round(np.std(d_dist_GS),5))
+    #print('d_count: \t',   np.round(np.mean(d_count_GS),5),  np.round(np.std(d_count_GS),5))
+    #print('implicity: \t', np.round(np.mean(d_impl_GS),5),   np.round(np.std(d_impl_GS),5))
 
     ## # FAT
 
@@ -622,60 +640,66 @@ for black_box in ['rf', 'svc', 'xgb']:
 
     ##print('success_rate: \t', len(d_dist_fat)/10)
 
-    #from scipy.spatial.distance import cdist, euclidean
-    #from scipy.optimize import minimize
-    #from scipy import stats
+    # Watcher
+    
+    from scipy.spatial.distance import cdist, euclidean
+    from scipy.optimize import minimize
+    from scipy import stats
 
-    #d_dist_watch = []
-    #d_count_watch = []
-    #d_impl_watch = []
+    d_dist_watch = []
+    d_count_watch = []
+    d_impl_watch = []
+    d_adv_watch = []
 
-    #for i in tqdm(range(100)):
-    #    # initial conditions
-    #    lamda = 0.1 
-    #    x0 = np.zeros([1,X_train.shape[1]]) # initial guess for cf
-    #    q = X_test[i:i+1,:].copy()
-    #    pred = predict(q,return_proba=False)
+    for i in tqdm(range(100)):
+        # initial conditions
+        lamda = 0.1 
+        x0 = np.zeros([1,X_train.shape[1]-1]) # initial guess for cf
+        q = X_test[i:i+1,:-1].copy()
+        pred = predict(q,return_proba=False)
 
-    #    def dist_mad(cf, eg):
-    #        manhat = [cdist(eg.T, cf.reshape(1,-1).T ,metric='cityblock')[i][i] for i in range(len(eg.T))]
-    #        #mad = stats.median_absolute_deviation(X_train)
-    #        return sum(manhat)
+        def dist_mad(cf, eg):
+            manhat = [cdist(eg.T, cf.reshape(1,-1).T ,metric='cityblock')[i][i] for i in range(len(eg.T))]
+            #mad = stats.median_absolute_deviation(X_train)
+            return sum(manhat)
 
-    #    def loss_function_mad(x_dash):
-    #        target = 1-pred
-    #        if target == 0:
-    #            L = lamda*(predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q)
-    #        else:
-    #            L = lamda*(1-predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q) 
-    #        return L
+        def loss_function_mad(x_dash):
+            target = 1-pred
+            if target == 0:
+                L = lamda*(predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q)
+            else:
+                L = lamda*(1-predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q) 
+            return L
 
-    #    res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
-    #    cf = res.x.reshape(1, -1)
+        res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
+        cf = res.x.reshape(1, -1)
 
-    #    i = 0
-    #    r = 1
-    #    while pred == predict(cf):
-    #        lamda += 0.1
-    #        x0 = cf 
-    #        res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
-    #        cf = res.x.reshape(1, -1)
-    #        i += 1
-    #        if i == 100:
-    #            r = 0
-    #            break
+        i = 0
+        r = 1
+        while pred == predict(cf):
+            lamda += 0.1
+            x0 = cf 
+            res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
+            cf = res.x.reshape(1, -1)
+            i += 1
+            if i == 100:
+                r = 0
+                break
 
-    #    if r == 1:
-    #        d_dist_watch.append(euclidean(cf,q))
-    #        d_count_watch.append(1/(cf.shape[0])*np.sum(cf!=q))
-    #        d_impl_watch.append(np.min(cdist(cf.reshape(1,-1),X_train)))
+        if r == 1:
+            d_dist_watch.append(euclidean(cf,q))
+            d_count_watch.append(1/(cf.shape[0])*np.sum(cf!=q))
+            d_impl_watch.append(np.min(cdist(cf.reshape(1,-1),X_train[:,:-1])))
+            r = np.argsort(cdist(cf,X_train[:,:-1]),axis=1)[:,:10]
+            d_adv_watch.append(np.mean(np.array([np.mean(predict(X_train[r,:-1][i,:])==pred) for i in range(cf.shape[0])])))
 
-    #with open('./results/fico_results.txt','a') as f:
-    #    f.write('Watcher '+black_box+'\n')
-    #    f.write(str(np.round(np.mean(d_dist_watch),5))+','+str(np.round(np.std(d_dist_watch),5))+'\n')
-    #    f.write(str(np.round(np.mean(d_count_watch),5))+','+str(np.round(np.std(d_count_watch),5))+'\n')
-    #    f.write(str(np.round(np.mean(d_impl_watch),5))+','+str(np.round(np.std(d_impl_watch),5))+'\n')
-    #    f.write('success_rate: '+str(len(d_dist_watch)/100)+'\n')
+    with open('./results/fico_results.txt','a') as f:
+        f.write('Watcher '+black_box+'\n')
+        f.write(str(np.round(np.mean(d_dist_watch),5))+','+str(np.round(np.std(d_dist_watch),5))+'\n')
+        f.write(str(np.round(np.mean(d_count_watch),5))+','+str(np.round(np.std(d_count_watch),5))+'\n')
+        f.write(str(np.round(np.mean(d_impl_watch),5))+','+str(np.round(np.std(d_impl_watch),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv_watch),5))+','+str(np.round(np.std(d_adv_watch),5))+'\n')
+        f.write('success_rate: '+str(len(d_dist_watch)/100)+'\n')
 
 
 

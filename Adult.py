@@ -112,9 +112,9 @@ print('test acc:',np.mean(np.round(y_test_pred)==y_test))
 # ### SVC
 
 from sklearn.svm import SVC
-clf_svc = SVC(gamma='auto', probability=True)
-clf_svc.fit(X_train.values, y_train.values)
-pickle.dump(clf_svc,open('./BlackBoxes/adult_svc.p','wb'))
+#clf_svc = SVC(gamma='auto', probability=True)
+#clf_svc.fit(X_train.values, y_train.values)
+#pickle.dump(clf_svc,open('./BlackBoxes/adult_svc.p','wb'))
 clf_svc = pickle.load(open('./BlackBoxes/adult_svc.p','rb'))
 def predict(x, return_proba=False):
     if return_proba:
@@ -187,7 +187,7 @@ print(accuracy_score(np.round(predict(X_test, return_proba = True)),y_test))
 print('---------------')
 
 
-for black_box in ['xgb','rf','svc', 'nn']:
+for black_box in ['xgb', 'rf', 'svc', 'nn']:
     
     X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.2, random_state=rnd)
     
@@ -282,92 +282,92 @@ for black_box in ['xgb','rf','svc', 'nn']:
     # Create Model
     model = LinearModel(X_train.shape[1], latent_dim=latent_dim)
 
-    train_dataset = TensorDataset(torch.tensor(X_train).float())
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True) 
-    test_dataset = TensorDataset(torch.tensor(X_test).float())
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False) 
+    #train_dataset = TensorDataset(torch.tensor(X_train).float())
+    #train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True) 
+    #test_dataset = TensorDataset(torch.tensor(X_test).float())
+    #test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False) 
 
-    def check_and_clear(dir_name):
-        if not os.path.exists(dir_name):
-            os.mkdir(dir_name)
-        else:
-            os.system('rm -r ' + dir_name)
-            os.mkdir(dir_name)
+    #def check_and_clear(dir_name):
+    #    if not os.path.exists(dir_name):
+    #        os.mkdir(dir_name)
+    #    else:
+    #        os.system('rm -r ' + dir_name)
+    #        os.mkdir(dir_name)
 
-    check_and_clear('./models/weights')
+    #check_and_clear('./models/weights')
 
-    model_params = list(model.parameters())
-    optimizer = torch.optim.Adam(model_params, lr=learning_rate)
+    #model_params = list(model.parameters())
+    #optimizer = torch.optim.Adam(model_params, lr=learning_rate)
 
     # record training process
-    epoch_train_losses = []
-    epoch_test_losses = []
+    #epoch_train_losses = []
+    #epoch_test_losses = []
 
     #validation parameters
-    epoch = 1
-    best = np.inf
+    #epoch = 1
+    #best = np.inf
 
     # progress bar
-    pbar = tqdm(bar_format="{postfix[0]} {postfix[1][value]:03d} {postfix[2]} {postfix[3][value]:.5f} {postfix[4]} {postfix[5][value]:.5f} {postfix[6]} {postfix[7][value]:d}",
-                postfix=["Epoch:", {'value':0}, "Train Sim Loss", {'value':0}, "Test Sim Loss", {'value':0}, "Early Stopping", {"value":0}])
+    #pbar = tqdm(bar_format="{postfix[0]} {postfix[1][value]:03d} {postfix[2]} {postfix[3][value]:.5f} {postfix[4]} {postfix[5][value]:.5f} {postfix[6]} {postfix[7][value]:d}",
+    #            postfix=["Epoch:", {'value':0}, "Train Sim Loss", {'value':0}, "Test Sim Loss", {'value':0}, "Early Stopping", {"value":0}])
 
     # start training
-    while epoch <= max_epochs:
+    #while epoch <= max_epochs:
 
-        # ------- TRAIN ------- #
-        # set model as training mode
-        model.train()
-        batch_loss = []
+    #    # ------- TRAIN ------- #
+    #    # set model as training mode
+    #    model.train()
+    #    batch_loss = []
 
-        for batch, (X_batch,) in enumerate(train_loader):
-            optimizer.zero_grad()
-            Z_batch = model(X_batch)  #
-            loss  = loss_function(X_batch, Z_batch, idx_cat, sigma) 
-            loss.backward()
-            optimizer.step()
-            batch_loss.append(loss.item())
+    #    for batch, (X_batch,) in enumerate(train_loader):
+    #        optimizer.zero_grad()
+    #        Z_batch = model(X_batch)  #
+    #        loss  = loss_function(X_batch, Z_batch, idx_cat, sigma) 
+    #        loss.backward()
+    #        optimizer.step()
+    #        batch_loss.append(loss.item())
 
-        # save result
-        epoch_train_losses.append(np.mean(batch_loss))
-        pbar.postfix[3]["value"] = np.mean(batch_loss)
+    #    # save result
+    #    epoch_train_losses.append(np.mean(batch_loss))
+    #    pbar.postfix[3]["value"] = np.mean(batch_loss)
 
-        # -------- VALIDATION --------
+    #    # -------- VALIDATION --------
 
-        # set model as testing mode
-        model.eval()
-        batch_loss = []
+    #    # set model as testing mode
+    #    model.eval()
+    #    batch_loss = []
 
-        with torch.no_grad():
-            for batch, (X_batch,) in enumerate(test_loader):
-                Z_batch = model(X_batch)
-                loss = loss_function(X_batch, Z_batch, idx_cat, sigma)
-                batch_loss.append(loss.item())
+    #    with torch.no_grad():
+    #        for batch, (X_batch,) in enumerate(test_loader):
+    #            Z_batch = model(X_batch)
+    #            loss = loss_function(X_batch, Z_batch, idx_cat, sigma)
+    #            batch_loss.append(loss.item())
 
-        # save information
-        epoch_test_losses.append(np.mean(batch_loss))
-        pbar.postfix[5]["value"] = np.mean(batch_loss)
-        pbar.postfix[1]["value"] = epoch
+    #    # save information
+    #    epoch_test_losses.append(np.mean(batch_loss))
+    #    pbar.postfix[5]["value"] = np.mean(batch_loss)
+    #    pbar.postfix[1]["value"] = epoch
 
-        if epoch_test_losses[-1] < best:
-            wait = 0
-            best = epoch_test_losses[-1]
-            best_epoch = epoch
-            torch.save(model.state_dict(), f'./models/weights/LinearTransparent_adult.pt')
-        else:
-            wait += 1
-        pbar.postfix[7]["value"] = wait
-        if wait == early_stopping:
-            break    
-        epoch += 1
-        pbar.update()
+    #    if epoch_test_losses[-1] < best:
+    #        wait = 0
+    #        best = epoch_test_losses[-1]
+    #        best_epoch = epoch
+    #        torch.save(model.state_dict(), f'./models/weights/LinearTransparent_adult.pt')
+    #    else:
+    #        wait += 1
+    #    pbar.postfix[7]["value"] = wait
+    #    if wait == early_stopping:
+    #        break    
+    #    epoch += 1
+    #    pbar.update()
 
-    model.load_state_dict(torch.load(f'./models/weights/LinearTransparent_adult.pt'))
-    with torch.no_grad():
-        model.eval()
-        Z_train = model(torch.tensor(X_train).float()).cpu().detach().numpy()
-        Z_test = model(torch.tensor(X_test).float()).cpu().detach().numpy()
+    #model.load_state_dict(torch.load(f'./models/weights/LinearTransparent_adult.pt'))
+    #with torch.no_grad():
+    #    model.eval()
+    #    Z_train = model(torch.tensor(X_train).float()).cpu().detach().numpy()
+    #    Z_test = model(torch.tensor(X_test).float()).cpu().detach().numpy()
 
-    torch.save(model.state_dict(), f'./models/adult_latent_{black_box}_{latent_dim}_{str(alpha).replace(".", "")}.pt')
+    #torch.save(model.state_dict(), f'./models/adult_latent_{black_box}_{latent_dim}_{str(alpha).replace(".", "")}.pt')
 
     model.load_state_dict(torch.load(f'./models/adult_latent_{black_box}_{latent_dim}_{str(alpha).replace(".", "")}.pt'))
     with torch.no_grad():
@@ -416,6 +416,7 @@ for black_box in ['xgb','rf','svc', 'nn']:
     d_dist = []
     d_impl = []
     d_count = []
+    d_adv = []
     num = []
     div_dist = []
     div_count = []
@@ -426,6 +427,16 @@ for black_box in ['xgb','rf','svc', 'nn']:
         q_cfs = []
         l_i = []
         l_f = []
+
+        for indexes in list(combinations(list(range(7)),1)):    
+            q_cf = compute_cf(q, list(indexes))
+            q_cf_pred = predict(q_cf[:-1].reshape(1,-1),return_proba=True)
+            if q_pred:
+                if q_cf_pred<0.5:
+                    q_cfs.append(q_cf)
+            else:
+                if q_cf_pred>0.5:
+                    q_cfs.append(q_cf) 
 
         for indexes in list(combinations(list(range(7)),2)):    
             q_cf = compute_cf(q, list(indexes))
@@ -464,6 +475,8 @@ for black_box in ['xgb','rf','svc', 'nn']:
             d_dist.append(np.min(cdist(q_cfs[:,[2,3,4,5,6]],q[[2,3,4,5,6]].reshape(1,-1),metric='hamming') + cdist(q_cfs[:,[0,1]],q[[0,1]].reshape(1,-1),metric='euclidean')))
             d_impl.append(np.min(cdist(q_cfs[:,[2,3,4,5,6]],X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cfs[:,[0,1]],X_train[:,[0,1]],metric='euclidean')))
             d_count.append(np.min(np.sum(q_cfs[:,:-1]!=q[:-1],axis=1)))
+            r = np.argsort(cdist(q_cfs[:,[2,3,4,5,6]],X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cfs[:,[0,1]],X_train[:,[0,1]],metric='euclidean'),axis=1)[:,:10]
+            d_adv.append(np.mean(np.array([np.mean(predict(X_train[r,:-1][i,:])==q_pred) for i in range(q_cfs.shape[0])])))
             num.append(len(q_cfs))
             div_dist.append(np.mean(cdist(q_cfs[:,[2,3,4,5,6]],q_cfs[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cfs[:,[0,1]],q_cfs[:,[0,1]],metric='euclidean')))
             div_count.append(7/(q_cfs.shape[0]**2)*np.sum(cdist(q_cfs[:,:-1], q_cfs[:,:-1],metric='hamming')))
@@ -473,86 +486,98 @@ for black_box in ['xgb','rf','svc', 'nn']:
         f.write(str(np.round(np.mean(d_dist),5))+','+str(np.round(np.std(d_dist),5))+'\n')
         f.write(str(np.round(np.mean(d_count),5))+','+str(np.round(np.std(d_count),5))+'\n')
         f.write(str(np.round(np.mean(d_impl),5))+','+str(np.round(np.std(d_impl),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv),5))+','+str(np.round(np.std(d_adv),5))+'\n')
         f.write(str(np.round(np.mean(num),5))+','+str(np.round(np.std(num),5))+'\n')
         f.write(str(np.round(np.mean(div_dist),5))+','+str(np.round(np.std(div_dist),5))+'\n')
         f.write(str(np.round(np.mean(div_count),5))+','+str(np.round(np.std(div_count),5))+'\n')
         f.write('success_rate: '+str(len(d_dist)/100)+'\n')
 
-    ## # Growing Spheres
+    # Growing Spheres
 
-    #from growingspheres import counterfactuals as cf
+    from growingspheres import counterfactuals as cf
 
-    #d_dist_GS = []
-    #d_count_GS = []
-    #d_impl_GS = []
+    d_dist_GS = []
+    d_count_GS = []
+    d_impl_GS = []
+    d_adv_GS = []
 
-    #for idx in tqdm(range(100)):
-    #    q = X_test[idx,:-1].reshape(1,-1).copy()
-    #    CF = cf.CounterfactualExplanation(q, predict, method='GS')
-    #    CF.fit(n_in_layer=2000, first_radius=0.1, dicrease_radius=10, sparse=True, verbose=False)
-    #    q_cf_GS = CF.enemy
-    #    d_dist_GS.append(float(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),q[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),q[:,[0,1]],metric='euclidean')))
-    #    d_count_GS.append(np.sum(q_cf_GS!=q))
-    #    d_impl_GS.append(np.min(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),X_train[:,[0,1]],metric='euclidean')))
+    for idx in tqdm(range(100)):
+        q = X_test[idx,:-1].reshape(1,-1).copy()
+        pred = int(predict(q))
+        CF = cf.CounterfactualExplanation(q, predict, method='GS')
+        CF.fit(n_in_layer=2000, first_radius=0.1, dicrease_radius=10, sparse=True, verbose=False)
+        q_cf_GS = CF.enemy
+        d_dist_GS.append(float(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),q[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),q[:,[0,1]],metric='euclidean')))
+        d_count_GS.append(np.sum(q_cf_GS!=q))
+        d_impl_GS.append(np.min(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),X_train[:,[0,1]],metric='euclidean')))
+        r = np.argsort(cdist(q_cf_GS[[2,3,4,5,6]].reshape(1,-1),X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(q_cf_GS[[0,1]].reshape(1,-1),X_train[:,[0,1]],metric='euclidean'),axis=1)[:,:10]
+        d_adv_GS.append(np.mean(np.array([np.mean(predict(X_train[r,:-1][i,:])==pred) for i in range(q_cf_GS.reshape(1,-1).shape[0])])))
 
-    #with open('./results/adult_results.txt','a') as f:
-    #    f.write('GSG '+black_box+'\n')
-    #    f.write(str(np.round(np.mean(d_dist_GS),5))+','+str(np.round(np.std(d_dist_GS),5))+'\n')
-    #    f.write(str(np.round(np.mean(d_count_GS),5))+','+str(np.round(np.std(d_count_GS),5))+'\n')
-    #    f.write(str(np.round(np.mean(d_impl_GS),5))+','+str(np.round(np.std(d_impl_GS),5))+'\n')
-    #    f.write('success_rate: '+str(len(d_dist_GS)/100)+'\n')
+    with open('./results/adult_results.txt','a') as f:
+        f.write('GSG '+black_box+'\n')
+        f.write(str(np.round(np.mean(d_dist_GS),5))+','+str(np.round(np.std(d_dist_GS),5))+'\n')
+        f.write(str(np.round(np.mean(d_count_GS),5))+','+str(np.round(np.std(d_count_GS),5))+'\n')
+        f.write(str(np.round(np.mean(d_impl_GS),5))+','+str(np.round(np.std(d_impl_GS),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv_GS),5))+','+str(np.round(np.std(d_adv_GS),5))+'\n')
+        f.write('success_rate: '+str(len(d_dist_GS)/100)+'\n')
 
-    #from scipy.spatial.distance import cdist, euclidean
-    #from scipy.optimize import minimize
-    #from scipy import stats
+    # Watcher
 
-    #d_dist_watch = []
-    #d_count_watch = []
-    #d_impl_watch = []
+    from scipy.spatial.distance import cdist, euclidean
+    from scipy.optimize import minimize
+    from scipy import stats
 
-    #for i in tqdm(range(100)):
-    #    # initial conditions
-    #    lamda = 0.1 
-    #    x0 = np.zeros([1,X_train.shape[1]]) # initial guess for cf
-    #    q = X_test[i:i+1,:].copy()
-    #    pred = predict(q,return_proba=False)
+    d_dist_watch = []
+    d_count_watch = []
+    d_impl_watch = []
+    d_adv_watch = []
 
-    #    def dist_mad(cf, eg):
-    #        manhat = [cdist(eg.T, cf.reshape(1,-1).T ,metric='cityblock')[i][i] for i in range(len(eg.T))]
-    #        #mad = stats.median_absolute_deviation(X_train)
-    #        return sum(manhat)
+    for i in tqdm(range(100)):
+        # initial conditions
+        lamda = 0.1 
+        x0 = np.zeros([1,X_train.shape[1]-1]) # initial guess for cf
+        q = X_test[i:i+1,:-1].copy()
+        pred = predict(q,return_proba=False)
 
-    #    def loss_function_mad(x_dash):
-    #        target = 1-pred
-    #        if target == 0:
-    #            L = lamda*(predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q)
-    #        else:
-    #            L = lamda*(1-predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q) 
-    #        return L
+        def dist_mad(cf, eg):
+            manhat = [cdist(eg.T, cf.reshape(1,-1).T ,metric='cityblock')[i][i] for i in range(len(eg.T))]
+            #mad = stats.median_absolute_deviation(X_train)
+            return sum(manhat)
 
-    #    res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
-    #    cf = res.x.reshape(1, -1)
+        def loss_function_mad(x_dash):
+            target = 1-pred
+            if target == 0:
+                L = lamda*(predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q)
+            else:
+                L = lamda*(1-predict(x_dash.reshape(1,-1),return_proba=True)-1)**2 + dist_mad(x_dash.reshape(1,-1), q) 
+            return L
 
-    #    i = 0
-    #    r = 1
-    #    while pred == predict(cf):
-    #        lamda += 0.1
-    #        x0 = cf 
-    #        res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':1000, 'xatol': 1e-8})
-    #        cf = res.x.reshape(1, -1)
-    #        i += 1
-    #        if i == 100:
-    #            r = 0
-    #            break
+        res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':100, 'xatol': 1e-6})
+        cf = res.x.reshape(1, -1)
 
-    #    if r == 1:
-    #        d_dist_watch.append(euclidean(cf,q))
-    #        d_count_watch.append(1/(cf.shape[0])*np.sum(cf!=q))
-    #        d_impl_watch.append(np.min(cdist(cf.reshape(1,-1),X_train)))
+        i = 0
+        r = 1
+        while pred == predict(cf):
+            lamda += 0.1
+            x0 = cf 
+            res = minimize(loss_function_mad, x0, method='nelder-mead', options={'maxiter':100, 'xatol': 1e-6})
+            cf = res.x.reshape(1, -1)
+            i += 1
+            if i == 100:
+                r = 0
+                break
 
-    #with open('./results/adult_results.txt','a') as f:
-    #    f.write('Watcher '+black_box+'\n')
-    #    f.write(str(np.round(np.mean(d_dist_watch),5))+','+str(np.round(np.std(d_dist_watch),5))+'\n')
-    #    f.write(str(np.round(np.mean(d_count_watch),5))+','+str(np.round(np.std(d_count_watch),5))+'\n')
-    #    f.write(str(np.round(np.mean(d_impl_watch),5))+','+str(np.round(np.std(d_impl_watch),5))+'\n')
-    #    f.write('success_rate: '+str(len(d_dist_watch)/100)+'\n')
+        if r == 1:
+            d_dist_watch.append(euclidean(cf,q))
+            d_count_watch.append(1/(cf.shape[0])*np.sum(cf!=q))
+            d_impl_watch.append(np.min(cdist(cf.reshape(1,-1),X_train[:,:-1])))
+            r = np.argsort(cdist(cf[:,[2,3,4,5,6]],X_train[:,[2,3,4,5,6]],metric='hamming') + cdist(cf[:,[0,1]],X_train[:,[0,1]],metric='euclidean'),axis=1)[:,:10]
+            d_adv_watch.append(np.mean(np.array([np.mean(predict(X_train[r,:-1][i,:])==pred) for i in range(cf.shape[0])])))
+
+    with open('./results/adult_results.txt','a') as f:
+        f.write('Watcher '+black_box+'\n')
+        f.write(str(np.round(np.mean(d_dist_watch),5))+','+str(np.round(np.std(d_dist_watch),5))+'\n')
+        f.write(str(np.round(np.mean(d_count_watch),5))+','+str(np.round(np.std(d_count_watch),5))+'\n')
+        f.write(str(np.round(np.mean(d_impl_watch),5))+','+str(np.round(np.std(d_impl_watch),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv_watch),5))+','+str(np.round(np.std(d_adv_watch),5))+'\n')
+        f.write('success_rate: '+str(len(d_dist_watch)/100)+'\n')

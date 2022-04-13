@@ -184,6 +184,7 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
     d_dist_dice = []
     d_count_dice = []
     d_impl_dice = []
+    d_adv_dice = []
     num_dice = []
     div_dist_dice = []
     div_count_dice = []
@@ -231,6 +232,8 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
             d_dist_dice.append(np.min(cdist(q_cfs_dice[:,:-1],query_instances.values)))
             d_count_dice.append(np.min(np.sum(q_cfs_dice[:,:-1]!=query_instances.values,axis=1)))
             d_impl_dice.append(np.min(cdist(q_cfs_dice[:,:-1],X_train)))
+            r = np.argsort(cdist(q_cfs_dice[:,:-1],X_train),axis=1)[:,:10]
+            d_adv_dice.append(np.mean(np.array([np.mean(predict(X_train[r,:][i,:])==pred) for i in range(q_cfs_dice.shape[0])])))
             num_dice.append(len(q_cfs_dice))
             div_dist_dice.append(1/(q_cfs_dice.shape[0]**2)*np.sum(cdist(q_cfs_dice[:,:-1],q_cfs_dice[:,:-1])))
             div_count_dice.append(23/(q_cfs_dice.shape[0]**2)*np.sum(cdist(q_cfs_dice[:,:-1], q_cfs_dice[:,:-1],metric='hamming')))
@@ -242,19 +245,11 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
         f.write(str(np.round(np.mean(d_dist_dice),5))+','+str(np.round(np.std(d_dist_dice),5))+'\n')
         f.write(str(np.round(np.mean(d_count_dice),5))+','+str(np.round(np.std(d_count_dice),5))+'\n')
         f.write(str(np.round(np.mean(d_impl_dice),5))+','+str(np.round(np.std(d_impl_dice),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv_dice),5))+','+str(np.round(np.std(d_impl_dice),5))+'\n')
         f.write(str(np.round(np.mean(num_dice),5))+','+str(np.round(np.std(num_dice),5))+'\n')
         f.write(str(np.round(np.mean(div_dist_dice),5))+','+str(np.round(np.std(div_dist_dice),5))+'\n')
         f.write(str(np.round(np.mean(div_count_dice),5))+','+str(np.round(np.std(div_count_dice),5))+'\n')
         f.write('success_rate: '+str(len(d_dist_dice)/100)+'\n')
-    
-    #print('d_dist: \t',    np.round(np.mean(d_dist_dice),5),   np.round(np.std(d_dist_dice),5))
-    #print('d_count: \t',   np.round(np.mean(d_count_dice),5),  np.round(np.std(d_count_dice),5))
-    #print('implicity: \t', np.round(np.mean(d_impl_dice),5),   np.round(np.std(d_impl_dice),5))
-    #print('number: \t',    np.round(np.mean(num_dice),5),'\t', np.round(np.std(num_dice),5))
-    #print('div_dist: \t',  np.round(np.mean(div_dist_dice),5), np.round(np.std(div_dist_dice),5))
-    #print('div_count: \t', np.round(np.mean(div_count_dice),5),np.round(np.std(div_count_dice),5))
-
-    #print('success_rate: \t', len(d_dist_dice)/10)
 
 
 

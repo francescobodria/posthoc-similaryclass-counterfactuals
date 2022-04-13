@@ -129,6 +129,9 @@ dmypy.json
 .pyre/
 
 #Directories
-models/weights/
+models/
 lightning_logs/
 data/MNIST/
+results/
+BlackBoxes/
+latent_analysis_models/
