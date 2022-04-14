@@ -10,7 +10,7 @@ import time
 import matplotlib.pyplot as plt
 import os
 
-rnd = 384
+rnd = 42
 np.random.seed(rnd)
 torch.manual_seed(rnd)
 
@@ -84,7 +84,7 @@ def load_tabular_data(name):
         y = df['RiskPerformance']
         df.drop(['RiskPerformance'], axis=1, inplace=True)
 
-        X_train, X_test, Y_train, Y_test = train_test_split(df, y, test_size=0.33, random_state=42)
+        X_train, X_test, Y_train, Y_test = train_test_split(df, y, test_size=0.2, random_state=rnd)
         return X_train, X_test, Y_train, Y_test
     
     elif name == 'german':
@@ -171,7 +171,7 @@ def load_tabular_data(name):
         y = df['default'].astype(int)
         df.drop(['default'], axis=1, inplace=True)
 
-        X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, stratify=y, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(df, y, test_size=0.2, stratify=y, random_state=rnd)
         return X_train, X_test, y_train, y_test
 
     elif name == 'compas':
