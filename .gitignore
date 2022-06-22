@@ -132,3 +132,5 @@ dmypy.json
 models/
 data/MNIST/
 old/
+blackboxes/
+results/
