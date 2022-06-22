@@ -14,7 +14,7 @@ def load_bb(X_train, X_test, dataset_name, bb_name):
 
     if bb_name == 'xgb':
         from xgboost import XGBClassifier
-        clf_xgb = pickle.load(open(f'./black_box_analysis/{dataset_name}_xgboost.p','rb'))
+        clf_xgb = pickle.load(open(f'./blackboxes/{dataset_name}_xgboost.p','rb'))
         def predict(x, return_proba=False):
             if return_proba:
                 return clf_xgb.predict_proba(x)[:,1].ravel()
@@ -25,7 +25,7 @@ def load_bb(X_train, X_test, dataset_name, bb_name):
 
     elif bb_name == 'rf':
         from sklearn.ensemble import RandomForestClassifier
-        clf_rf = pickle.load(open(f'./black_box_analysis/{dataset_name}_rf.p','rb'))
+        clf_rf = pickle.load(open(f'./blackboxes/{dataset_name}_rf.p','rb'))
         def predict(x, return_proba=False):
             if return_proba:
                 return clf_rf.predict_proba(x)[:,1].ravel()
@@ -36,7 +36,7 @@ def load_bb(X_train, X_test, dataset_name, bb_name):
 
     elif bb_name == 'svc':
         from sklearn.svm import SVC
-        clf_svc = pickle.load(open(f'./black_box_analysis/{dataset_name}_svc.p','rb'))
+        clf_svc = pickle.load(open(f'./blackboxes/{dataset_name}_svc.p','rb'))
         def predict(x, return_proba=False):
             if return_proba:
                 return clf_svc.predict_proba(x)[:,1].ravel()
@@ -58,7 +58,7 @@ def load_bb(X_train, X_test, dataset_name, bb_name):
                     loss='binary_crossentropy',
                     metrics=['accuracy'])
 
-        clf_nn.load_weights(f'./black_box_analysis/{dataset_name}_tf_nn')
+        clf_nn.load_weights(f'./blackboxes/{dataset_name}_tf_nn')
         clf_nn.trainable = False
         def predict(x, return_proba=False):
             if return_proba:

@@ -20,7 +20,7 @@ torch.manual_seed(random_seed)
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
-df = pd.read_csv('./data/heloc_dataset.csv')
+df = pd.read_csv('../data/heloc_dataset.csv')
 df['RiskPerformance']=(df.RiskPerformance=='Bad')+0
 
 scaler = MinMaxScaler((-1,1))
@@ -40,7 +40,7 @@ clf_xgb = XGBClassifier(n_estimators=60, reg_lambda=3, use_label_encoder=False, 
 #clf_xgb.fit(X_train, Y_train)
 #clf_xgb.save_model('./BlackBoxes/fico_xgboost')
 
-clf_xgb.load_model('./BlackBoxes/fico_xgboost')
+clf_xgb.load_model('../blackboxes/fico_xgboost')
 y_train_pred = clf_xgb.predict(X_train)
 y_test_pred = clf_xgb.predict(X_test)
 print('XGBOOST')
@@ -49,14 +49,14 @@ print('test acc:',np.mean(np.round(y_test_pred)==Y_test))
 
 # ### Random Forest
 
-#from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 #clf_rf = RandomForestClassifier(random_state=random_seed)
 #clf_rf.fit(X_train, Y_train)
 
-#pickle.dump(clf_rf,open('./BlackBoxes/fico_rf.p','wb'))
+#pickle.dump(clf_rf,open('../blackboxes/fico_rf.p','wb'))
 
-clf_rf = pickle.load(open('./BlackBoxes/fico_rf.p','rb'))
+clf_rf = pickle.load(open('../blackboxes/fico_rf.p','rb'))
 y_train_pred = clf_rf.predict(X_train)
 y_test_pred = clf_rf.predict(X_test)
 print('RF')
@@ -69,9 +69,9 @@ print('test acc:',np.mean(np.round(y_test_pred)==Y_test))
 #clf_svc = SVC(gamma='auto', probability=True)
 #clf_svc.fit(X_train, Y_train)
 
-#pickle.dump(clf_svc,open('./BlackBoxes/fico_svc.p','wb'))
+#pickle.dump(clf_svc,open('../blackboxes/fico_svc.p','wb'))
 
-clf_svc = pickle.load(open('./BlackBoxes/fico_svc.p','rb'))
+clf_svc = pickle.load(open('../blackboxes/fico_svc.p','rb'))
 y_train_pred = clf_svc.predict(X_train)
 y_test_pred = clf_svc.predict(X_test)
 print('SVC')
@@ -100,13 +100,13 @@ clf_nn.compile(optimizer='adam',
               loss='binary_crossentropy',
               metrics=['accuracy'])
 
-#history = clf_nn.fit(
-#    train_dataset,
-#    validation_data=test_dataset,
-#    epochs=500,
-#    callbacks=[early_stopping],
-#    verbose=0
-#)
+history = clf_nn.fit(
+    train_dataset,
+    validation_data=test_dataset,
+    epochs=500,
+    callbacks=[early_stopping],
+    verbose=0
+)
 
 def plot_metric(history, metric):
     train_metrics = history.history[metric]
@@ -122,41 +122,50 @@ def plot_metric(history, metric):
     plt.show()
 
 #plot_metric(history, 'loss')
-#clf_nn.save_weights('./blackboxes/fico_tf_nn')
+clf_nn.save_weights('../blackboxes/fico_tf_nn')
 
 from sklearn.metrics import accuracy_score
-clf_nn.load_weights('./blackboxes/fico_tf_nn')
+clf_nn.load_weights('../blackboxes/fico_tf_nn')
 clf_nn.trainable = False
 print('NN')
 print(accuracy_score(np.round(clf_nn.predict(X_train)),Y_train))
 print(accuracy_score(np.round(clf_nn.predict(X_test)),Y_test))
 print('---------------')
 
-# ### Predict Functions
-
-def predict_clf_xgboost(x, return_proba=False):
-    if return_proba:
-        return clf_xgb.predict_proba(x)[:,1].ravel()
-    else: return clf_xgb.predict(x).ravel().ravel()
-
-def predict_clf_rf(x, return_proba=False):
-    if return_proba:
-        return clf_rf.predict_proba(x)[:,1].ravel()
-    else: return clf_rf.predict(x).ravel().ravel()
-
-def predict_clf_svc(x, return_proba=False):
-    if return_proba:
-        return clf_svc.predict_proba(x)[:,1].ravel()
-    else: return clf_svc.predict(x).ravel().ravel()
-
-def predict_clf_nn(x, return_proba=False):
-    if return_proba:
-        return clf_nn.predict(x).ravel()
-    else: return np.round(clf_nn.predict(x).ravel()).astype(int).ravel()
-
 # # Latent Space
 
-for black_box in ['nn', 'rf', 'svc', 'xgb']:
+for black_box in ['xgb', 'rf', 'svc', 'nn']:
+
+    X_train, X_test, Y_train, Y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+
+    if black_box=='xgb':
+        def predict(x, return_proba=False):
+            if return_proba:
+                return clf_xgb.predict_proba(x)[:,1].ravel()
+            else: return clf_xgb.predict(x).ravel().ravel()
+        y_test_pred = predict(X_test, return_proba=True)
+        y_train_pred = predict(X_train, return_proba=True)
+    elif black_box=='rf':
+        def predict(x, return_proba=False):
+            if return_proba:
+                return clf_rf.predict_proba(x)[:,1].ravel()
+            else: return clf_rf.predict(x).ravel().ravel()
+        y_test_pred = predict(X_test, return_proba=True)
+        y_train_pred = predict(X_train, return_proba=True)
+    elif black_box=='svc':
+        def predict(x, return_proba=False):
+            if return_proba:
+                return clf_svc.predict_proba(x)[:,1].ravel()
+            else: return clf_svc.predict(x).ravel().ravel()
+        y_test_pred = predict(X_test, return_proba=True)
+        y_train_pred = predict(X_train, return_proba=True)
+    elif black_box=='nn':
+        def predict(x, return_proba=False):
+            if return_proba:
+                return clf_nn.predict(x).ravel()
+            else: return np.round(clf_nn.predict(x).ravel()).astype(int).ravel()
+        y_test_pred = predict(X_test, return_proba=True)
+        y_train_pred = predict(X_train, return_proba=True)
 
     from scipy.spatial.distance import euclidean, cdist
 
@@ -227,6 +236,7 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
 
     for i in tqdm(range(100)):
         query_instances = dataset.iloc[i:i+1,1:]
+        pred = predict(query_instances)
         try:
             q_cfs_dice = compute_cfs_dice(query_instances)
             d_dist_dice.append(np.min(cdist(q_cfs_dice[:,:-1],query_instances.values)))
@@ -240,12 +250,12 @@ for black_box in ['nn', 'rf', 'svc', 'xgb']:
         except:
             continue
     
-    with open('./results/fico_results_dice.txt','a') as f:
+    with open('../results/fico_results_dice.txt','a') as f:
         f.write('dice '+black_box+'\n')
         f.write(str(np.round(np.mean(d_dist_dice),5))+','+str(np.round(np.std(d_dist_dice),5))+'\n')
         f.write(str(np.round(np.mean(d_count_dice),5))+','+str(np.round(np.std(d_count_dice),5))+'\n')
         f.write(str(np.round(np.mean(d_impl_dice),5))+','+str(np.round(np.std(d_impl_dice),5))+'\n')
-        f.write(str(np.round(np.mean(d_adv_dice),5))+','+str(np.round(np.std(d_impl_dice),5))+'\n')
+        f.write(str(np.round(np.mean(d_adv_dice),5))+','+str(np.round(np.std(d_adv_dice),5))+'\n')
         f.write(str(np.round(np.mean(num_dice),5))+','+str(np.round(np.std(num_dice),5))+'\n')
         f.write(str(np.round(np.mean(div_dist_dice),5))+','+str(np.round(np.std(div_dist_dice),5))+'\n')
         f.write(str(np.round(np.mean(div_count_dice),5))+','+str(np.round(np.std(div_count_dice),5))+'\n')

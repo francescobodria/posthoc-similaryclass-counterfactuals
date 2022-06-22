@@ -1,6 +1,7 @@
 import tensorflow as tf
 tf.compat.v1.enable_eager_execution()
 import pandas as pd
+pd.set_option('display.max_columns', 500)
 import pickle
 import numpy as np
 import torch
@@ -11,14 +12,14 @@ from tqdm import tqdm
 import time
 import os
 
-rnd = 384
+rnd = 42
 np.random.seed(rnd)
 torch.manual_seed(rnd)
 
 from sklearn.preprocessing import OrdinalEncoder, MinMaxScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 
-df = pd.read_csv('./data/adult_clear.csv')
+df = pd.read_csv('../data/adult_clear.csv')
 df = df[df["workclass"] != "?"]
 df = df[df["occupation"] != "?"]
 df = df[df["native-country"] != "?"]
@@ -85,9 +86,9 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratif
 from xgboost import XGBClassifier
 clf_xgb = XGBClassifier(n_estimators=60, reg_lambda=3, use_label_encoder=False, eval_metric='logloss')
 clf_xgb.fit(X_train, y_train)
-pickle.dump(clf_xgb,open('./BlackBoxes/adult_dice_xgboost.p','wb'))
+pickle.dump(clf_xgb,open('../blackboxes/adult_dice_xgboost.p','wb'))
 
-clf_xgb = pickle.load(open('./BlackBoxes/adult_dice_xgboost.p','rb'))
+clf_xgb = pickle.load(open('../blackboxes/adult_dice_xgboost.p','rb'))
 def predict(x, return_proba=False):
     if return_proba:
         return clf_xgb.predict_proba(x)[:,1].ravel()
@@ -105,8 +106,8 @@ from sklearn.ensemble import RandomForestClassifier
 clf_rf = RandomForestClassifier(max_depth=7,random_state=rnd)
 clf_rf.fit(X_train, y_train)
 
-pickle.dump(clf_rf,open('./BlackBoxes/adult_dice_rf.p','wb'))
-clf_rf = pickle.load(open('./BlackBoxes/adult_dice_rf.p','rb'))
+pickle.dump(clf_rf,open('../blackboxes/adult_dice_rf.p','wb'))
+clf_rf = pickle.load(open('../blackboxes/adult_dice_rf.p','rb'))
 
 def predict(x, return_proba=False):
     if return_proba:
@@ -123,8 +124,8 @@ print('test acc:',np.mean(np.round(y_test_pred)==y_test))
 from sklearn.svm import SVC
 clf_svc = SVC(gamma='auto', probability=True)
 clf_svc.fit(X_train, y_train)
-pickle.dump(clf_svc,open('./BlackBoxes/adult_dice_svc.p','wb'))
-clf_svc = pickle.load(open('./BlackBoxes/adult_dice_svc.p','rb'))
+pickle.dump(clf_svc,open('../blackboxes/adult_dice_svc.p','wb'))
+clf_svc = pickle.load(open('../blackboxes/adult_dice_svc.p','rb'))
 def predict(x, return_proba=False):
     if return_proba:
         return clf_svc.predict_proba(x)[:,1].ravel()
@@ -179,10 +180,10 @@ def plot_metric(history, metric):
     plt.show()
 
 plot_metric(history, 'loss')
-clf_nn.save_weights('./blackboxes/adult_dice_tf_nn')
+clf_nn.save_weights('../blackboxes/adult_dice_tf_nn')
 
 from sklearn.metrics import accuracy_score
-clf_nn.load_weights('./blackboxes/adult_dice_tf_nn')
+clf_nn.load_weights('../blackboxes/adult_dice_tf_nn')
 clf_nn.trainable = False
 
 def predict(x, return_proba=False):
@@ -195,7 +196,7 @@ print(accuracy_score(np.round(predict(X_train, return_proba = True)),y_train))
 print(accuracy_score(np.round(predict(X_test, return_proba = True)),y_test))
 print('---------------')
 
-for black_box in ['xgb','rf','svc']:
+for black_box in ['svc']:
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=rnd)
 
@@ -205,7 +206,7 @@ for black_box in ['xgb','rf','svc']:
 
     import dice_ml
 
-    dataset = pd.DataFrame(np.hstack((y_train.values.reshape(-1,1).astype(int),X_train.values)), columns=['income']+list(X_train.columns))
+    dataset = pd.DataFrame(np.hstack((y_test.values.reshape(-1,1).astype(int),X_test.values)), columns=['income']+list(X_test.columns))
     d = dice_ml.Data(dataframe=dataset, continuous_features=['age', 'hoursPerWeek'], outcome_name='income')
 
     if black_box == 'nn':
@@ -217,7 +218,7 @@ for black_box in ['xgb','rf','svc']:
         X.drop(['income'], axis=1, inplace=True)
         y = df["income"].apply(lambda x: ">50K" in x).astype(int)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=rnd)
-        dataset = pd.DataFrame(np.hstack((y_train.values.reshape(-1,1).astype(int),X_train.values)), columns=['income']+list(X_train.columns))
+        dataset = pd.DataFrame(np.hstack((y_test.values.reshape(-1,1).astype(int),X_test.values)), columns=['income']+list(X_test.columns))
         X_train = np.hstack((X_train.values[:,:2].astype(float),hot_enc.transform(pd.DataFrame(X_train.values[:,[2,3,4,5,6]],columns=list(df.columns)[2:-1])).toarray().astype(int)))  
         dataset.loc[:,'age']=dataset.loc[:,'age'].values.astype(float)
         dataset.loc[:,'hoursPerWeek']=dataset.loc[:,'hoursPerWeek'].values.astype(float)
@@ -283,8 +284,10 @@ for black_box in ['xgb','rf','svc']:
         q_cfs_dice = dice_exp.cf_examples_list[0].final_cfs_df.values
         return q_cfs_dice
 
-    for i in tqdm(range(100)):
+    for i in [13]:#tqdm(range(100)):
         query_instances = dataset.iloc[i:i+1,1:]
+        print(query_instances)
+        print(query_instances.columns)
         try:
             q_cfs_dice = compute_cfs_dice(query_instances)
         except:
@@ -306,17 +309,18 @@ for black_box in ['xgb','rf','svc']:
         num_dice.append(len(q_cfs_dice))
         div_dist_dice.append(1/(q_cfs_dice.shape[0]**2)*np.sum(cdist(q_cfs_dice[:,:-1],q_cfs_dice[:,:-1])))
         div_count_dice.append(20/(q_cfs_dice.shape[0]**2)*np.sum(cdist(q_cfs_dice[:,:-1], q_cfs_dice[:,:-1],metric='hamming')))
+        print(q_cfs_dice)
     
-    with open('./results/adult_results_dice.txt','a') as f:
-        f.write('dice '+black_box+'\n')
-        f.write(str(np.round(np.mean(d_dist_dice),5))+','+str(np.round(np.std(d_dist_dice),5))+'\n')
-        f.write(str(np.round(np.mean(d_count_dice),5))+','+str(np.round(np.std(d_count_dice),5))+'\n')
-        f.write(str(np.round(np.mean(d_impl_dice),5))+','+str(np.round(np.std(d_impl_dice),5))+'\n')
-        f.write(str(np.round(np.mean(d_adv_dice),5))+','+str(np.round(np.std(d_adv_dice),5))+'\n')
-        f.write(str(np.round(np.mean(num_dice),5))+','+str(np.round(np.std(num_dice),5))+'\n')
-        f.write(str(np.round(np.mean(div_dist_dice),5))+','+str(np.round(np.std(div_dist_dice),5))+'\n')
-        f.write(str(np.round(np.mean(div_count_dice),5))+','+str(np.round(np.std(div_count_dice),5))+'\n')
-        f.write('success_rate: '+str(len(d_dist_dice)/100)+'\n')
+    #with open('../results/adult_results_dice.txt','a') as f:
+        #f.write('dice '+black_box+'\n')
+        #f.write(str(np.round(np.mean(d_dist_dice),5))+','+str(np.round(np.std(d_dist_dice),5))+'\n')
+        #f.write(str(np.round(np.mean(d_count_dice),5))+','+str(np.round(np.std(d_count_dice),5))+'\n')
+        #f.write(str(np.round(np.mean(d_adv_dice),5))+','+str(np.round(np.std(d_adv_dice),5))+'\n')
+        #f.write(str(np.round(np.mean(d_impl_dice),5))+','+str(np.round(np.std(d_impl_dice),5))+'\n')
+        #f.write(str(np.round(np.mean(num_dice),5))+','+str(np.round(np.std(num_dice),5))+'\n')
+        #f.write(str(np.round(np.mean(div_dist_dice),5))+','+str(np.round(np.std(div_dist_dice),5))+'\n')
+        #f.write(str(np.round(np.mean(div_count_dice),5))+','+str(np.round(np.std(div_count_dice),5))+'\n')
+        #f.write('success_rate: '+str(len(d_dist_dice)/100)+'\n')
 
 
 
