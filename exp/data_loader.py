@@ -2,6 +2,7 @@ import pandas as pd
 import pickle
 import numpy as np
 import torch
+import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import TensorDataset, DataLoader
@@ -207,3 +208,101 @@ def load_tabular_data(name):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=rnd)
         return X_train, X_test, y_train, y_test, df
 
+
+def load_image_data(dataset_name, path, batch_size=2048):
+
+    class ReshapeTransform:
+        def __init__(self, new_size):
+            self.new_size = new_size
+
+        def __call__(self, img):
+            return torch.reshape(img, self.new_size)
+
+    mnist_transforms = [torchvision.transforms.ToTensor(),
+                        #torchvision.transforms.Normalize((0.1307,), (0.3081,)),
+                        ReshapeTransform((28*28,))]
+    
+    if dataset_name=='MNIST':
+        train_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.MNIST(f'{path}', 
+                                       train=True, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=False)
+        test_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.MNIST(f'{path}', 
+                                       train=False, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=False)
+    elif dataset_name=='FashionMNIST':
+        train_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.FashionMNIST(f'{path}', 
+                                       train=True, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=False)
+        test_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.FashionMNIST(f'{path}', 
+                                       train=False, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=False)
+
+    with torch.no_grad():
+        x_train=[]
+        y_train = []
+        for i, data in enumerate(train_loader):
+            batch_X, batch_y = data[0], data[1]
+            x_train.append(batch_X)
+            y_train.append(batch_y)
+        x_train = np.vstack(x_train)
+        y_train = np.hstack(y_train)
+    with torch.no_grad():
+        y_test = []
+        x_test = []
+        for i, data in enumerate(test_loader):
+            batch_X, batch_y = data[0], data[1]
+            x_test.append(batch_X)
+            y_test.append(batch_y)
+        x_test = np.vstack(x_test)
+        y_test = np.hstack(y_test)
+        
+    if dataset_name=='MNIST':
+        train_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.MNIST(f'{path}', 
+                                       train=True, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=True)
+
+        test_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.MNIST(f'{path}', 
+                                       train=False, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=False)
+    elif dataset_name=='FashionMNIST':
+        train_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.FashionMNIST(f'{path}', 
+                                       train=True, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=True)
+
+        test_loader = torch.utils.data.DataLoader(
+            torchvision.datasets.FashionMNIST(f'{path}', 
+                                       train=False, 
+                                       download=True,
+                                       transform=torchvision.transforms.Compose(mnist_transforms)),
+            batch_size=batch_size, 
+            shuffle=False)
+    
+    return x_train, x_test, y_train, y_test, train_loader, test_loader
