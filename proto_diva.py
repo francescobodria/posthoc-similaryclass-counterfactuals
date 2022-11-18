@@ -80,8 +80,8 @@ columns = X_train.columns
 from xgboost import XGBClassifier
 clf_xgb = XGBClassifier(use_label_encoder=False, eval_metric='logloss')
 # clf_xgb.fit(X_train, Y_train)
-# clf_xgb.save_model(f'./blackboxes/diva_xgboost')
-clf_xgb.load_model(f'./blackboxes/diva_xgboost')
+# clf_xgb.save_model(f'./blackboxes/diva_xgboost.p')
+clf_xgb.load_model(f'./blackboxes/diva_xgboost.p')
 y_train_pred = clf_xgb.predict(X_train)
 y_test_pred = clf_xgb.predict(X_test)
 print('XGB')

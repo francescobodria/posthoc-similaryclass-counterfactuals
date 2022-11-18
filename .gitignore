@@ -134,3 +134,14 @@ data/MNIST/
 old/
 blackboxes/
 results/
+.gitignore
+results_proto_adult.pickle
+results_proto_compas.pickle
+results_proto_diva.pickle
+results_proto_german.pickle
+results_manual.xlsx
+result_analysis.ipynb
+MNIST.ipynb
+FICO_dataset_analysis.py
+diva_dataset.ipynb
+proto_diva.py
