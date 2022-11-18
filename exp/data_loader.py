@@ -207,6 +207,65 @@ def load_tabular_data(name):
         X = X.drop(['two_year_recid'],axis=1,inplace=False)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=rnd)
         return X_train, X_test, y_train, y_test, df
+    elif name == 'diva':
+        # load dataset
+        df = pd.read_csv(open('./data/diva/processed_diva.csv'))
+        df = df.drop(np.where(np.prod(~df.isnull().values,axis=1)==0)[0])
+        df.COD_STATO_DOC = df.COD_STATO_DOC.values.astype(str)
+        df = df.reset_index(drop=True)
+        y = (df.CNR_S_AND_EXT_Obi==3)+0
+        df = df.drop('CNR_S_AND_EXT_Obi',axis=1)
+
+        drop = []
+        continuous = []
+        categorical = []
+
+        for i in df.columns:
+            if len(df.loc[:,i].unique())>110:
+                continuous.append(i)
+            elif len(df.loc[:,i].unique())==1:
+                drop.append(i)
+            else:
+                categorical.append(i)
+
+        strings = ['cod_uff_prov_gen','cod_uff_ann_gen','INNESCO','TIPOLOGIA_CON','SETT_IMP','COD_MOD_DICH','COD_STATO_DOC']
+        for s in strings:
+            categorical.remove(s)
+
+        df = df.drop(drop,axis=1)
+
+        from sklearn import preprocessing
+
+        cont_df = df.loc[:,continuous]
+        cont_df = preprocessing.RobustScaler().fit_transform(cont_df)
+        min_max_scaler = preprocessing.MinMaxScaler([-1,1])
+        cont_df = min_max_scaler.fit_transform(cont_df)
+        cont_df = pd.DataFrame(cont_df,columns=continuous)
+
+        cat_num_df = df.loc[:,categorical]
+        hot_enc = preprocessing.OneHotEncoder(handle_unknown='ignore')
+        hot_enc.fit(cat_num_df)
+        names = []
+        for i in range(len(cat_num_df.columns)):
+            for j in range(len(hot_enc.categories_[i])):
+                names.append(cat_num_df.columns[i]+'_'+str(hot_enc.categories_[i][j]))
+        cat_num_df[names]=hot_enc.transform(cat_num_df).toarray().astype(int)
+        cat_num_df = cat_num_df.drop(categorical,axis=1)
+
+        cat_str_df = df.loc[:,strings]
+        hot_enc = preprocessing.OneHotEncoder(handle_unknown='ignore')
+        hot_enc.fit(cat_str_df)
+        names = []
+        for i in range(len(cat_str_df.columns)):
+            for j in range(len(hot_enc.categories_[i])):
+                names.append(cat_str_df.columns[i]+'_'+str(hot_enc.categories_[i][j]))
+        cat_str_df[names]=hot_enc.transform(cat_str_df).toarray().astype(int)
+        cat_str_df = cat_str_df.drop(strings,axis=1)
+
+        df = pd.concat([cont_df,cat_num_df,cat_str_df],axis=1)
+
+        from sklearn.model_selection import train_test_split
+        X_train, X_test, Y_train, Y_test = train_test_split(df, y, test_size=0.33, random_state=random_seed)
 
 
 def load_image_data(dataset_name, path, batch_size=2048):

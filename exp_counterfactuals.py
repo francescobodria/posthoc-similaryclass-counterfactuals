@@ -35,6 +35,8 @@ elif dataset_name == 'german':
     idx_cat = np.arange(3,71,1).tolist()
 elif dataset_name == 'compas':
     idx_cat = list(range(13,33,1))
+elif dataset_name == 'diva':
+    idx_cat = list(range(58))
 
 # LOAD Dataset
 from exp.data_loader import load_tabular_data

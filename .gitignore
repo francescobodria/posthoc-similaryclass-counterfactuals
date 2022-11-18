@@ -131,7 +131,9 @@ dmypy.json
 #Directories
 models/
 data/MNIST/
-old/
+.data/
+data/diva
+ric/
 blackboxes/
 results/
 .gitignore
