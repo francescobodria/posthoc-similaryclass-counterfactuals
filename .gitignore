@@ -136,7 +136,10 @@ data/diva
 ric/
 blackboxes/
 results/
+
+#Files
 .gitignore
+.DS_Store
 results_proto_adult.pickle
 results_proto_compas.pickle
 results_proto_diva.pickle
